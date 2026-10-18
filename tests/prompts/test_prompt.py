@@ -3,7 +3,7 @@ from typing import Annotated, Any
 
 import pytest
 from mcp_types import EmbeddedResource, TextResourceContents
-from pydantic import Field
+from pydantic import BaseModel, Field
 
 from fastmcp import Client, FastMCP
 from fastmcp.prompts.base import (
@@ -11,6 +11,25 @@ from fastmcp.prompts.base import (
     Prompt,
     PromptResult,
 )
+
+
+class TestRenderPrompt:
+    async def test_fn_with_postponed_annotations(self):
+        namespace = {}
+        exec(
+            "from __future__ import annotations\n"
+            "from pydantic import BaseModel\n"
+            "class Config(BaseModel):\n"
+            "    key: str\n"
+            "def show_config(cfg: Config) -> str:\n"
+            "    return f'config={cfg.key}'\n",
+            namespace,
+        )
+
+        prompt = Prompt.from_function(namespace["show_config"])
+        result = await prompt.render({"cfg": '{"key": "v"}'})
+
+        assert result.messages == [Message("config=v")]
 
 
 class TestRenderPrompt:
