@@ -14,6 +14,19 @@ from fastmcp.prompts.base import (
 
 
 class TestRenderPrompt:
+    async def test_render_prompt_serializes_non_string_arguments_for_middleware(self):
+        def greet(name: str, times: int) -> str:
+            return f"hi {name} " * times
+
+        mcp = FastMCP("test")
+        mcp.add_prompt(greet)
+
+        result = await mcp.render_prompt(
+            "greet", {"name": "bob", "times": 3}
+        )
+
+        assert result.messages[0].content.text == "hi bob hi bob hi bob "
+
     async def test_basic_fn(self):
         def fn() -> str:
             return "Hello, world!"
