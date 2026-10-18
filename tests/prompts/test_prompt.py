@@ -19,7 +19,7 @@ class TestRenderPrompt:
             return f"hi {name} " * times
 
         mcp = FastMCP("test")
-        mcp.add_prompt(greet)
+        mcp.add_prompt(Prompt.from_function(greet))
 
         result = await mcp.render_prompt(
             "greet", {"name": "bob", "times": 3}
