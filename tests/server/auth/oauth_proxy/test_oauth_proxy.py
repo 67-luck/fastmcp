@@ -1,6 +1,7 @@
 """Tests for OAuth proxy initialization and configuration."""
 
 import time
+from types import SimpleNamespace
 from unittest.mock import AsyncMock, patch
 from urllib.parse import parse_qs, urlparse
 
@@ -657,16 +658,38 @@ class TestCIMDTokenEndpointAudience:
         assert proxy.token_endpoint_url == metadata["token_endpoint"]
 
 
-def test_load_access_token_restores_fastmcp_client_identity():
+async def test_load_access_token_restores_fastmcp_client_identity(oauth_proxy):
     from mcp.server.auth.provider import AccessToken
 
-    validated = AccessToken(
-        token="upstream-access-token",
-        client_id="upstream-client",
-        scopes=["read"],
+    oauth_proxy.jwt_issuer.verify_token = lambda token: {
+        "jti": "dcr-jti",
+        "client_id": "dcr-client",
+    }
+    oauth_proxy._jti_mapping_store.get = AsyncMock(
+        return_value=SimpleNamespace(upstream_token_id="upstream-id")
     )
-    result = _apply_fastmcp_client_id(validated, {"client_id": "dcr-client"})
+    oauth_proxy._upstream_token_store.get = AsyncMock(
+        return_value=SimpleNamespace(
+            access_token="upstream-access-token",
+            refresh_token=None,
+            expires_at=time.time() + 3600,
+        )
+    )
+    oauth_proxy._get_verification_token = lambda token_set: "upstream-access-token"
+    oauth_proxy._token_validator.verify_token = AsyncMock(
+        return_value=AccessToken(
+            token="upstream-access-token",
+            client_id="upstream-client",
+            scopes=["read"],
+        )
+    )
+
+    result = await oauth_proxy.load_access_token("fastmcp-jwt")
+
+    assert result is not None
     assert result.client_id == "dcr-client"
-    assert validated.client_id == "upstream-client"
+    oauth_proxy._token_validator.verify_token.assert_awaited_once_with(
+        "upstream-access-token"
+    )
 
 
