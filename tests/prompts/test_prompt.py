@@ -3,7 +3,7 @@ from typing import Annotated, Any
 
 import pytest
 from mcp_types import EmbeddedResource, TextResourceContents
-from pydantic import BaseModel, Field
+from pydantic import Field
 
 from fastmcp import Client, FastMCP
 from fastmcp.prompts.base import (
