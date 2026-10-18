@@ -29,6 +29,7 @@ from typing import (
 
 import httpx2
 import mcp_types
+import pydantic_core
 from mcp.server.lowlevel.server import LifespanResultT
 from mcp.server.request_state import RequestStateSecurity
 from mcp.shared.exceptions import MCPError
@@ -1718,10 +1719,22 @@ class FastMCP(
         """
         async with fastmcp.server.context.Context(fastmcp=self) as ctx:
             if run_middleware:
+                wire_arguments = (
+                    None
+                    if arguments is None
+                    else {
+                        key: (
+                            value
+                            if isinstance(value, str)
+                            else pydantic_core.to_json(value).decode()
+                        )
+                        for key, value in arguments.items()
+                    }
+                )
                 mw_context = MiddlewareContext(
                     message=mcp_types.GetPromptRequestParams(
                         name=name,
-                        arguments=arguments,
+                        arguments=wire_arguments,
                         _meta=_version_request_meta(version),
                     ),
                     source="client",
