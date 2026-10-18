@@ -2347,7 +2347,8 @@ class OAuthProxy(OAuthProvider, ConsentMixin):
             # the DCR client id in the verified FastMCP JWT. Upstream validation
             # returns the upstream application's client id, so restore the
             # FastMCP identity before the token reaches ownership checks.
-            validated = _apply_fastmcp_client_id(validated, payload)
+            if self._upstream_revocation_endpoint:
+                validated = _apply_fastmcp_client_id(validated, payload)
 
             # Propagate upstream claims from the verified FastMCP JWT into the
             # final AccessToken object. This allows subclasses to access custom

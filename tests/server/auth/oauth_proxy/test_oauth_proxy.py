@@ -14,7 +14,6 @@ from starlette.applications import Starlette
 from starlette.testclient import TestClient
 
 from fastmcp.server.auth.oauth_proxy import OAuthProxy
-from fastmcp.server.auth.oauth_proxy.proxy import _apply_fastmcp_client_id
 from fastmcp.server.auth.oauth_proxy.models import OAuthTransaction
 from fastmcp.server.auth.oauth_proxy.upstream import AsyncOAuth2Client
 
@@ -660,6 +659,8 @@ class TestCIMDTokenEndpointAudience:
 
 async def test_load_access_token_restores_fastmcp_client_identity(oauth_proxy):
     from mcp.server.auth.provider import AccessToken
+    from mcp.server.auth.handlers.revoke import RevocationHandler
+    from starlette.requests import Request
 
     oauth_proxy.get_routes()
 
@@ -689,9 +690,41 @@ async def test_load_access_token_restores_fastmcp_client_identity(oauth_proxy):
     result = await oauth_proxy.load_access_token("fastmcp-jwt")
 
     assert result is not None
-    assert result.client_id == "dcr-client"
+    assert result.client_id == "upstream-client"
     oauth_proxy._token_validator.verify_token.assert_awaited_once_with(
         "upstream-access-token"
     )
+
+    oauth_proxy._upstream_revocation_endpoint = "https://auth.example.com/revoke"
+    result = await oauth_proxy.load_access_token("fastmcp-jwt")
+    assert result is not None
+    assert result.client_id == "dcr-client"
+
+    async def receive():
+        return {
+            "type": "http.request",
+            "body": b"token=fastmcp-jwt&client_id=dcr-client&client_secret=",
+            "more_body": False,
+        }
+
+    request = Request(
+        {
+            "type": "http",
+            "method": "POST",
+            "headers": [(b"content-type", b"application/x-www-form-urlencoded")],
+        },
+        receive,
+    )
+    authenticator = SimpleNamespace(
+        authenticate_request=AsyncMock(
+            return_value=SimpleNamespace(client_id="dcr-client")
+        )
+    )
+    oauth_proxy.load_access_token = AsyncMock(return_value=result)
+    oauth_proxy.revoke_token = AsyncMock()
+    response = await RevocationHandler(oauth_proxy, authenticator).handle(request)
+
+    assert response.status_code == 200
+    oauth_proxy.revoke_token.assert_awaited_once_with(result)
 
 
