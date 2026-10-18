@@ -31,8 +31,6 @@ class TestRenderPrompt:
 
         assert result.messages == [Message("config=v")]
 
-
-class TestRenderPrompt:
     async def test_basic_fn(self):
         def fn() -> str:
             return "Hello, world!"
