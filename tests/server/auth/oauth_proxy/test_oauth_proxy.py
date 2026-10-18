@@ -661,6 +661,8 @@ class TestCIMDTokenEndpointAudience:
 async def test_load_access_token_restores_fastmcp_client_identity(oauth_proxy):
     from mcp.server.auth.provider import AccessToken
 
+    oauth_proxy.get_routes()
+
     oauth_proxy.jwt_issuer.verify_token = lambda token: {
         "jti": "dcr-jti",
         "client_id": "dcr-client",
