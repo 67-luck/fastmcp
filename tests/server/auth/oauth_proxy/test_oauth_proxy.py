@@ -13,6 +13,7 @@ from starlette.applications import Starlette
 from starlette.testclient import TestClient
 
 from fastmcp.server.auth.oauth_proxy import OAuthProxy
+from fastmcp.server.auth.oauth_proxy.proxy import _apply_fastmcp_client_id
 from fastmcp.server.auth.oauth_proxy.models import OAuthTransaction
 from fastmcp.server.auth.oauth_proxy.upstream import AsyncOAuth2Client
 
@@ -654,3 +655,18 @@ class TestCIMDTokenEndpointAudience:
             metadata = client.get("/.well-known/oauth-authorization-server").json()
 
         assert proxy.token_endpoint_url == metadata["token_endpoint"]
+
+
+def test_load_access_token_restores_fastmcp_client_identity():
+    from mcp.server.auth.provider import AccessToken
+
+    validated = AccessToken(
+        token="upstream-access-token",
+        client_id="upstream-client",
+        scopes=["read"],
+    )
+    result = _apply_fastmcp_client_id(validated, {"client_id": "dcr-client"})
+    assert result.client_id == "dcr-client"
+    assert validated.client_id == "upstream-client"
+
+
