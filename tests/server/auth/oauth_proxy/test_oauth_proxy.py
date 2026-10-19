@@ -658,8 +658,8 @@ class TestCIMDTokenEndpointAudience:
 
 
 async def test_load_access_token_restores_fastmcp_client_identity(oauth_proxy):
-    from mcp.server.auth.provider import AccessToken
     from mcp.server.auth.handlers.revoke import RevocationHandler
+    from mcp.server.auth.provider import AccessToken
     from starlette.requests import Request
 
     oauth_proxy.get_routes()
@@ -726,5 +726,3 @@ async def test_load_access_token_restores_fastmcp_client_identity(oauth_proxy):
 
     assert response.status_code == 200
     oauth_proxy.revoke_token.assert_awaited_once_with(result)
-
-
