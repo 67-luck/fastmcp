@@ -6,6 +6,7 @@ from collections.abc import Mapping, Sequence
 from typing import TYPE_CHECKING, Any
 from urllib.parse import urlparse
 
+from joserfc import jwt
 from mcp.server.auth.handlers.metadata import MetadataHandler
 from mcp.server.auth.handlers.token import TokenErrorResponse
 from mcp.server.auth.handlers.token import TokenHandler as _SDKTokenHandler
@@ -262,9 +263,22 @@ class PrivateKeyJWTClientAuthenticator(_SDKClientAuthenticator):
         """
         form_data = await request.form()
         client_id = form_data.get("client_id")
+        assertion = form_data.get("client_assertion")
 
-        # If client_id is not in form data, delegate to SDK
-        # This handles client_secret_basic which sends credentials in Authorization header
+        # RFC 7523 permits private_key_jwt clients to omit client_id when the
+        # assertion's issuer identifies the client. Decode only to select the
+        # CIMD document; validate the signature and claims below.
+        if not client_id and isinstance(assertion, str):
+            try:
+                claims = jwt.decode(assertion, options={"verify_signature": False})
+            except Exception:
+                claims = {}
+            candidate = claims.get("iss") or claims.get("sub")
+            if isinstance(candidate, str):
+                client_id = candidate
+
+        # If client_id is still not available, delegate to SDK. This preserves
+        # client_secret_basic and the existing error for malformed assertions.
         if not client_id:
             return await super().authenticate_request(request)
 
@@ -276,7 +290,6 @@ class PrivateKeyJWTClientAuthenticator(_SDKClientAuthenticator):
         if client.token_endpoint_auth_method == "private_key_jwt":
             # Validate assertion parameters
             assertion_type = form_data.get("client_assertion_type")
-            assertion = form_data.get("client_assertion")
 
             if assertion_type != JWT_BEARER_ASSERTION_TYPE:
                 raise AuthenticationError(
