@@ -268,14 +268,19 @@ class PrivateKeyJWTClientAuthenticator(_SDKClientAuthenticator):
         # RFC 7523 permits private_key_jwt clients to omit client_id when the
         # assertion's issuer identifies the client. Decode only to select the
         # CIMD document; validate the signature and claims below.
-        if not client_id and isinstance(assertion, str):
+        if (
+            not client_id
+            and form_data.get("client_assertion_type") == JWT_BEARER_ASSERTION_TYPE
+            and isinstance(assertion, str)
+        ):
             try:
                 claims = decode_jwt_payload(assertion)
-            except Exception:
+            except (ValueError, TypeError):
                 claims = {}
-            candidate = claims.get("iss") or claims.get("sub")
-            if isinstance(candidate, str):
-                client_id = candidate
+            if isinstance(claims, dict):
+                candidate = claims.get("iss") or claims.get("sub")
+                if isinstance(candidate, str):
+                    client_id = candidate
 
         # If client_id is still not available, delegate to SDK. This preserves
         # client_secret_basic and the existing error for malformed assertions.
