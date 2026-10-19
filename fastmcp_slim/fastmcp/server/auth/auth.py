@@ -6,7 +6,6 @@ from collections.abc import Mapping, Sequence
 from typing import TYPE_CHECKING, Any
 from urllib.parse import urlparse
 
-from joserfc import jwt
 from mcp.server.auth.handlers.metadata import MetadataHandler
 from mcp.server.auth.handlers.token import TokenErrorResponse
 from mcp.server.auth.handlers.token import TokenHandler as _SDKTokenHandler
@@ -51,6 +50,7 @@ from starlette.middleware.authentication import AuthenticationMiddleware
 from starlette.requests import Request
 from starlette.routing import Route
 
+from fastmcp.utilities.auth import decode_jwt_payload
 from fastmcp.utilities.logging import get_logger
 
 if TYPE_CHECKING:
@@ -270,7 +270,7 @@ class PrivateKeyJWTClientAuthenticator(_SDKClientAuthenticator):
         # CIMD document; validate the signature and claims below.
         if not client_id and isinstance(assertion, str):
             try:
-                claims = jwt.decode(assertion, options={"verify_signature": False})
+                claims = decode_jwt_payload(assertion)
             except Exception:
                 claims = {}
             candidate = claims.get("iss") or claims.get("sub")
