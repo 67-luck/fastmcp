@@ -193,7 +193,7 @@ async def download_skill(
         if not file_path.is_relative_to(skill_dir):
             continue
 
-        file_uri = f"skill://{skill_name}/{quote(file_info.path, safe="/")}"
+        file_uri = f"skill://{skill_name}/{quote(file_info.path, safe='/')}"
         result = await client.read_resource(file_uri)
 
         if not result:
