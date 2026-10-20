@@ -504,3 +504,30 @@ async def test_background_context_logging_without_session():
         await context.info("worker progress")
     finally:
         _background_task_session_id.reset(token)
+
+
+
+async def test_background_context_logging_honors_no_session_level(monkeypatch):
+    from unittest.mock import AsyncMock
+
+    from fastmcp.server.dependencies import _background_task_session_id
+    from fastmcp.server.context import _log_to_server_and_client
+
+    mcp = FastMCP("test")
+    mcp._client_log_levels["__no_session__"] = "warning"
+    context = Context(
+        fastmcp=mcp,
+        task_id="task-1",
+        origin_request_id="request-1",
+    )
+    sender = AsyncMock()
+    monkeypatch.setattr(
+        "fastmcp.server.context._log_to_server_and_client", sender
+    )
+    token = _background_task_session_id.set("snapshot-session")
+    try:
+        await context.info("suppressed")
+    finally:
+        _background_task_session_id.reset(token)
+
+    sender.assert_not_awaited()
