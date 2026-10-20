@@ -639,7 +639,7 @@ class Context:
             if task_session_id is None:
                 raise
             session = None
-            session_min = self.fastmcp._client_log_levels.get(task_session_id)
+            session_min = self.fastmcp._client_log_levels.get(_log_level_session_key(None))
         else:
             session_min = self.fastmcp._client_log_levels.get(
                 _log_level_session_key(session)
