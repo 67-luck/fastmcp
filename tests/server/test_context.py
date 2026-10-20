@@ -511,7 +511,6 @@ async def test_background_context_logging_honors_no_session_level(monkeypatch):
     from unittest.mock import AsyncMock
 
     from fastmcp.server.dependencies import _background_task_session_id
-    from fastmcp.server.context import _log_to_server_and_client
 
     mcp = FastMCP("test")
     mcp._client_log_levels["__no_session__"] = "warning"
